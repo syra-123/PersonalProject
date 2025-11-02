@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>I ❤️ YOU — Love Animation</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --accent: #ff557a;
+    --muted: #9aa3b2;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    height: 100vh;
+    font-family: "Poppins", Arial, sans-serif;
+    background: radial-gradient(circle at 10% 20%, rgba(85,120,255,0.08), transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(255,85,122,0.05), transparent 30%),
+                var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    overflow: hidden;
+  }
+
+  .card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 18px;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    width: min(90%, 480px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .I, .YOU {
+    font-size: 2.8rem;
+    font-weight: 700;
+  }
+
+  .heart-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin: 16px;
+    outline: none;
+  }
+
+  .heart {
+    width: 120px;
+    height: 120px;
+    animation: pulse 1.3s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  .heart-btn.active .heart {
+    filter: drop-shadow(0 0 20px var(--accent));
+  }
+
+  .message {
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-top: 12px;
+    transition: all 0.4s ease;
+    opacity: 0;
+    transform: scale(0.9);
+    color: var(--muted);
+  }
+
+  .message.show {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  #typedText {
+    margin-top: 10px;
+    font-size: 1rem;
+    color: #eee;
+  }
+
+  canvas {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  @keyframes floatUp {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-120px) scale(0.8); opacity: 0; }
+  }
+
+  .floating-heart {
+    position: absolute;
+    font-size: 1.5rem;
+    color: #ff557a;
+    opacity: 0;
+    animation: floatUp 2s ease-out forwards;
+  }
+
+  audio {
+    display: none;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="I">I</div>
+    <button class="heart-btn" id="heartBtn" aria-label="Love Button">
+      <svg class="heart" viewBox="0 0 32 29.6" xmlns="http://www.w3.org/2000/svg">
+        <path fill="url(#grad1)" d="M23.6,0c-2.7,0-5.1,1.6-6.6,3.9C15.5,1.6,13.1,0,10.4,0C4.7,0,0,4.7,0,10.4
+        c0,7.9,12.4,13.6,15.6,18.1c0.9,1.2,2.5,1.2,3.4,0C19.6,24,32,18.3,32,10.4C32,4.7,27.3,0,21.6,0z"/>
+        <defs>
+          <linearGradient id="grad1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#ff7b9a"/>
+            <stop offset="100%" stop-color="#ff335f"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </button>
+    <div class="YOU">YOU</div>
+    <div class="message" id="messageCard">
+      <h3>💌 Love Message</h3>
+      <p id="typedText"></p>
+    </div>
+    <canvas id="confetti"></canvas>
+    <audio id="bgMusic" loop>
+      <source src="https://cdn.pixabay.com/download/audio/2023/01/24/audio_04ce88b9da.mp3?filename=romantic-piano-background-139631.mp3" type="audio/mpeg">
+    </audio>
+  </div>
+
+<script>
+const heartBtn = document.getElementById('heartBtn');
+const messageCard = document.getElementById('messageCard');
+const typedText = document.getElementById('typedText');
+const confettiCanvas = document.getElementById('confetti');
+const ctx = confettiCanvas.getContext('2d');
+const music = document.getElementById('bgMusic');
+
+let active = false;
+let particles = [];
+let typingTimer;
+let musicStarted = false;
+
+const messages = [
+  "I love you more than words can say ❤️",
+  "You make my world brighter 🌸",
+  "Every heartbeat says your name 💞",
+  "You are my today and all of my tomorrows 💫"
+];
+
+function resizeCanvas() {
+  confettiCanvas.width = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function random(min, max) { return Math.random() * (max - min) + min; }
+
+function createConfetti() {
+  for (let i = 0; i < 80; i++) {
+    particles.push({
+      x: random(0, confettiCanvas.width),
+      y: random(0, confettiCanvas.height / 2),
+      r: random(2, 5),
+      c: `hsl(${random(0,360)}, 100%, 70%)`, // ✅ FIXED — added backticks
+      vy: random(1, 3)
+    });
+  }
+}
+
+function drawConfetti() {
+  ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  particles.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = p.c;
+    ctx.fill();
+    p.y += p.vy;
+  });
+  particles = particles.filter(p => p.y < confettiCanvas.height);
+  if (particles.length) requestAnimationFrame(drawConfetti);
+}
+
+function typeMessage(text) {
+  clearInterval(typingTimer);
+  typedText.textContent = '';
+  let i = 0;
+  typingTimer = setInterval(() => {
+    if (i < text.length) {
+      typedText.textContent += text[i++];
+    } else {
+      clearInterval(typingTimer);
+    }
+  }, 40);
+}
+
+function showMessage() {
+  const text = messages[Math.floor(Math.random() * messages.length)];
+  messageCard.classList.add('show');
+  typeMessage(text);
+  createConfetti();
+  drawConfetti();
+}
+
+function hideMessage() {
+  messageCard.classList.remove('show');
+  clearInterval(typingTimer);
+  typedText.textContent = '';
+}
+
+function createFloatingHearts() {
+  for (let i = 0; i < 8; i++) {
+    const heart = document.createElement('div');
+    heart.className = 'floating-heart';
+    heart.textContent = '❤';
+    document.body.appendChild(heart);
+    heart.style.left = random(40, 60) + '%';
+    heart.style.top = '60%';
+    heart.style.animationDuration = random(2, 4) + 's';
+    heart.style.fontSize = random(18, 28) + 'px';
+    setTimeout(() => heart.remove(), 2000);
+  }
+}
+
+function toggleLove() {
+  active = !active;
+  heartBtn.classList.toggle('active', active);
+  if (active) {
+    showMessage();
+    createFloatingHearts();
+    if (!musicStarted) {
+      music.play().catch(() => {});
+      musicStarted = true;
+    }
+  } else {
+    hideMessage();
+  }
+}
+
+heartBtn.addEventListener('click', toggleLove);
+</script>
+</body>
+</html>
